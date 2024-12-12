@@ -1,6 +1,6 @@
 import os
 import yaml
-from datetime import datetime
+import shutil
 
 
 class FileManager:
@@ -11,12 +11,19 @@ class FileManager:
         with open(CONFIG_PATH, 'w') as f:
             yaml.dump({'last_paths': {'source': None, 'destination': None}}, f, default_flow_style=False)
 
+    FOLDER_MAP = {
+        '100_BIAS': 'biases',
+        '101_DARK': 'darks',
+        '102_FLAT': 'flats',
+        '103_LITE': 'lights',
+    }
+
     def __init__(self):
         self._config_data = None
         self._source_path = None
         self._destination_path = None
-        self._target_name = None
-        self._shoot_date = datetime.now()
+        self.target_name = None
+        self.shoot_date = None
         self.recall_last()
 
     @property
@@ -61,9 +68,22 @@ class FileManager:
         with open(self.CONFIG_PATH, 'w') as f:
             yaml.dump(self.config_data, f, default_flow_style=False)
 
+    def transfer_files(self, target_name: str, shoot_date: str, copy=False) -> None:
+        extended_destination = os.path.join(self.destination_path, target_name, f'{target_name}_{shoot_date}')
+        shutil.copytree(os.path.join(self.source_path), dst=extended_destination)
+
+        # ToDo: Delete EOSMISC
+        shutil.rmtree(os.path.join(extended_destination, 'EOSMISC'))
+        # ToDo: Rename destination folders
+        for pre, post in self.FOLDER_MAP.items():
+            os.rename(src=os.path.join(extended_destination, pre), dst=os.path.join(extended_destination, post))
+
+        # ToDo: Erase SD card if copy == False
+
 
 if __name__ == "__main__":
     fm = FileManager()
+    fm.transfer_files(target_name='M42', shoot_date='241216')
     # print(fm.source_path, fm.destination_path)
     # fm.update_last("/Volumes/CANON_256GB/DCIM", "/Volumes/JDUBIN_EXT/Astrophotography/Projects")
     # fm.recall_last()
