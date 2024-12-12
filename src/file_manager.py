@@ -1,10 +1,15 @@
 import os
 import yaml
-from pathlib import Path
 from datetime import datetime
 
 
 class FileManager:
+
+    # Create a config file if none exists
+    CONFIG_PATH = "../config/config.yaml"
+    if not os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, 'w') as f:
+            yaml.dump({'last_paths': {'source': None, 'destination': None}}, f, default_flow_style=False)
 
     def __init__(self):
         self._config_data = None
@@ -19,7 +24,7 @@ class FileManager:
         return self._config_data
 
     @config_data.setter
-    def config_data(self, config_data: dict):
+    def config_data(self, config_data: dict) -> None:
         self._config_data = config_data
 
     @property
@@ -27,7 +32,7 @@ class FileManager:
         return self._source_path
 
     @source_path.setter
-    def source_path(self, source_path: str):
+    def source_path(self, source_path: str) -> None:
         self._source_path = source_path
 
     @property
@@ -35,11 +40,11 @@ class FileManager:
         return self._destination_path
 
     @destination_path.setter
-    def destination_path(self, destination_path: str):
+    def destination_path(self, destination_path: str) -> None:
         self._destination_path = destination_path
 
-    def recall_last(self):
-        with open("../config/config.yaml", 'r') as f:
+    def recall_last(self) -> None:
+        with open(self.CONFIG_PATH, 'r') as f:
             self.config_data = yaml.load(f, Loader=yaml.FullLoader)
         try:
             self.source_path = self.config_data['last_paths']['source']
@@ -50,11 +55,16 @@ class FileManager:
         except TypeError:
             self.destination_path = None
 
-    def update_last(self):
-        pass
+    def update_last(self, source_path: str, destination_path: str) -> None:
+        self.config_data['last_paths']['source'] = source_path
+        self.config_data['last_paths']['destination'] = destination_path
+        with open(self.CONFIG_PATH, 'w') as f:
+            yaml.dump(self.config_data, f, default_flow_style=False)
 
 
 if __name__ == "__main__":
     fm = FileManager()
-    sd = os.listdir(fm.source_path)
-    dd = os.listdir(fm.destination_path)
+    # print(fm.source_path, fm.destination_path)
+    # fm.update_last("/Volumes/CANON_256GB/DCIM", "/Volumes/JDUBIN_EXT/Astrophotography/Projects")
+    # fm.recall_last()
+    # print(fm.source_path, fm.destination_path)
