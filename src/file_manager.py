@@ -73,7 +73,7 @@ class FileManager:
         shutil.copytree(os.path.join(self.source_path), dst=extended_destination)
 
         # Delete EOSMISC folder
-        shutil.rmtree(os.path.join(extended_destination, 'EOSMISC'), onerror=self.ignore_extended_attributes)
+        shutil.rmtree(os.path.join(extended_destination, 'EOSMISC'), ignore_errors=True)
 
         # Rename destination folders
         for pre, post in self.FOLDER_MAP.items():
@@ -89,14 +89,7 @@ class FileManager:
                     img_path = os.path.join(folder_path, file_name)
                     os.remove(img_path)
 
-    @staticmethod
-    def ignore_extended_attributes(func, filename, exc_info):
-        # Workaround for outstanding MacOS bug with shutil.rmtree
-        is_meta_file = os.path.basename(filename).startswith("._")
-        if not (func is os.unlink and is_meta_file):
-            raise
-
 
 if __name__ == "__main__":
     fm = FileManager()
-    fm.transfer_files(target_name='M42', shoot_date='241217')
+    fm.transfer_files(target_name='M42', shoot_date='241218', cut_paste=True)
