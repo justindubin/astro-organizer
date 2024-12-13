@@ -22,8 +22,6 @@ class FileManager:
         self._config_data = None
         self._source_path = None
         self._destination_path = None
-        self.target_name = None
-        self.shoot_date = None
         self.recall_last()
 
     @property
