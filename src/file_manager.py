@@ -68,23 +68,37 @@ class FileManager:
         with open(self.CONFIG_PATH, 'w') as f:
             yaml.dump(self.config_data, f, default_flow_style=False)
 
-    def transfer_files(self, target_name: str, shoot_date: str, copy=False) -> None:
+    def transfer_files(self, target_name: str, shoot_date: str, cut_paste=True) -> None:
+
+        # Copy the full directory tree from source to destination
         extended_destination = os.path.join(self.destination_path, target_name, f'{target_name}_{shoot_date}')
         shutil.copytree(os.path.join(self.source_path), dst=extended_destination)
 
-        # ToDo: Delete EOSMISC
-        shutil.rmtree(os.path.join(extended_destination, 'EOSMISC'))
-        # ToDo: Rename destination folders
+        # Delete EOSMISC folder
+        shutil.rmtree(os.path.join(extended_destination, 'EOSMISC'), onerror=self.ignore_extended_attributes)
+
+        # Rename destination folders
         for pre, post in self.FOLDER_MAP.items():
             os.rename(src=os.path.join(extended_destination, pre), dst=os.path.join(extended_destination, post))
 
-        # ToDo: Erase SD card if copy == False
+        # Delete files from source directory
+        if cut_paste:
+            for folder_name in os.listdir(self.source_path):
+                if folder_name == 'EOSMISC':
+                    continue
+                folder_path = os.path.join(self.source_path, folder_name)
+                for file_name in os.listdir(folder_path):
+                    img_path = os.path.join(folder_path, file_name)
+                    os.remove(img_path)
+
+    @staticmethod
+    def ignore_extended_attributes(func, filename, exc_info):
+        # Workaround for outstanding MacOS bug with shutil.rmtree
+        is_meta_file = os.path.basename(filename).startswith("._")
+        if not (func is os.unlink and is_meta_file):
+            raise
 
 
 if __name__ == "__main__":
     fm = FileManager()
-    fm.transfer_files(target_name='M42', shoot_date='241216')
-    # print(fm.source_path, fm.destination_path)
-    # fm.update_last("/Volumes/CANON_256GB/DCIM", "/Volumes/JDUBIN_EXT/Astrophotography/Projects")
-    # fm.recall_last()
-    # print(fm.source_path, fm.destination_path)
+    fm.transfer_files(target_name='M42', shoot_date='241217')
