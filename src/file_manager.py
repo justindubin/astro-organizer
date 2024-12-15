@@ -5,8 +5,8 @@ import shutil
 
 class FileManager:
 
-    # Create a config file if none exists
-    CONFIG_PATH = "../config/config.yaml"
+    # Create a cfg file if none exists
+    CONFIG_PATH = "../cfg/config.yaml"
     if not os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH, 'w') as f:
             yaml.dump({'last_paths': {'source': None, 'destination': None}}, f, default_flow_style=False)
