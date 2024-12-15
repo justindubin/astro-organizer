@@ -1,12 +1,13 @@
 import os
 import yaml
 import shutil
+from pathlib import Path
 
 
 class FileManager:
 
     # Create a cfg file if none exists
-    CONFIG_PATH = "../cfg/config.yaml"
+    CONFIG_PATH = os.path.join(str(Path(__file__).parent.parent), "cfg/config.yaml")
     if not os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH, 'w') as f:
             yaml.dump({'last_paths': {'source': None, 'destination': None}}, f, default_flow_style=False)
