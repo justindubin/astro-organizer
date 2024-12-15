@@ -1,4 +1,6 @@
 import os
+import time
+from datetime import timedelta
 import yaml
 import shutil
 from pathlib import Path
@@ -61,34 +63,69 @@ class FileManager:
         except TypeError:
             self.destination_path = None
 
-    def update_last(self, source_path: str, destination_path: str) -> None:
-        self.config_data['last_paths']['source'] = source_path
-        self.config_data['last_paths']['destination'] = destination_path
+    def update_last(self, source_path=None, destination_path=None) -> None:
+        if source_path is not None:
+            self.config_data['last_paths']['source'] = source_path
+        if destination_path is not None:
+            self.config_data['last_paths']['destination'] = destination_path
         with open(self.CONFIG_PATH, 'w') as f:
             yaml.dump(self.config_data, f, default_flow_style=False)
 
-    def transfer_files(self, target_name: str, shoot_date: str, cut_paste=True) -> None:
+    def transfer_files(self, target_name: str, shoot_date: str, cut_paste=True, signaler=None) -> None:
+        _t0 = time.perf_counter()
+
+        if signaler is not None:
+            signaler.emit('-' * 50)
+            signaler.emit(f'Initiating file transfer for {target_name} ({shoot_date}) session')
 
         # Copy the full directory tree from source to destination
         extended_destination = os.path.join(self.destination_path, target_name, f'{target_name}_{shoot_date}')
+        if signaler is not None:
+            signaler.emit(f'\nCopying directory tree ...')
+        t0 = time.perf_counter()
         shutil.copytree(os.path.join(self.source_path), dst=extended_destination)
+        t1 = time.perf_counter()
+        if signaler is not None:
+            signaler.emit(f'Completed transfer in: {timedelta(seconds=t1-t0)}')
 
         # Delete EOSMISC folder
         shutil.rmtree(os.path.join(extended_destination, 'EOSMISC'), ignore_errors=True)
 
         # Rename destination folders
+        if signaler is not None:
+            signaler.emit(f'\nRenaming folders for Siril compliance ...')
+        t0 = time.perf_counter()
         for pre, post in self.FOLDER_MAP.items():
             os.rename(src=os.path.join(extended_destination, pre), dst=os.path.join(extended_destination, post))
+            if signaler is not None:
+                signaler.emit(f'    * {pre} --> {post}')
+        t1 = time.perf_counter()
+        if signaler is not None:
+            signaler.emit(f'Completed transfer in: {timedelta(seconds=t1-t0)}')
 
         # Delete files from source directory
         if cut_paste:
+            if signaler is not None:
+                signaler.emit(f'\nRemoving files from source directory ...')
+            t0 = time.perf_counter()
             for folder_name in os.listdir(self.source_path):
                 if folder_name == 'EOSMISC':
                     continue
                 folder_path = os.path.join(self.source_path, folder_name)
                 for file_name in os.listdir(folder_path):
                     img_path = os.path.join(folder_path, file_name)
-                    os.remove(img_path)
+                    try:
+                        os.remove(img_path)
+                    except FileNotFoundError:
+                        # Workaround for MacOS
+                        pass
+            t1 = time.perf_counter()
+            if signaler is not None:
+                signaler.emit(f'Cleaned source directory in: {timedelta(seconds=t1 - t0)}')
+
+        _t1 = time.perf_counter()
+        if signaler is not None:
+            signaler.emit(f'\nProcess completed in {timedelta(seconds=t1-t0)}')
 
 
 if __name__ == "__main__":

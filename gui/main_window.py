@@ -1,13 +1,17 @@
-from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2 import QtWidgets, QtCore
 from src.file_manager import FileManager
 
 
 class MainWindow(QtWidgets.QMainWindow):
+    update_signal = QtCore.Signal(str)
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Astro File Organizer")
         self.setFixedSize(950, 330)
+
+        # Custom Signals
+        self.update_signal.connect(self.print_to_console)
 
         # Create a file manager
         self.fm = FileManager()
@@ -41,7 +45,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Add Widgets - Inputs - Directory Buttons
         btn_layout = QtWidgets.QHBoxLayout()
         self.btn_source = QtWidgets.QPushButton("Change Source")
+        self.btn_source.clicked.connect(self.update_source)
         self.btn_destination = QtWidgets.QPushButton("Change Destination")
+        self.btn_destination.clicked.connect(self.update_destination)
         btn_layout.addWidget(self.btn_source)
         btn_layout.addWidget(self.btn_destination)
         btn_layout.setContentsMargins(0, 0, 0, 20)
@@ -66,6 +72,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Add Widgets - Inputs - Execute Button
         self.btn_execute = QtWidgets.QPushButton("Transfer Files")
+        self.btn_execute.clicked.connect(self.transfer_files)
         self.inputs_layout.addWidget(self.btn_execute)
 
         # Add Widgets - Outputs
@@ -73,7 +80,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.output_console.setReadOnly(True)
         scroll_area = QtWidgets.QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setFixedWidth(400)
+        scroll_area.setFixedWidth(350)
         scroll_area.setFixedHeight(300)
         scroll_area.setWidget(self.output_console)
         self.outputs_layout.addWidget(scroll_area)
@@ -81,6 +88,26 @@ class MainWindow(QtWidgets.QMainWindow):
     def print_to_console(self, text: str) -> None:
         self.output_console.append(text)
 
-    def clear_console(self) -> None:
-        # TODO
-        pass
+    def update_source(self) -> None:
+        directory = self.select_directory('source')
+        self.fm.update_last(source_path=directory)
+        self.ent_source.setText(directory)
+        self.print_to_console(f"Successfully remapped source directory")
+
+    def update_destination(self) -> None:
+        directory = self.select_directory('destination')
+        self.fm.update_last(destination_path=directory)
+        self.ent_destination.setText(directory)
+        self.print_to_console(f"Successfully remapped destination directory")
+
+    def select_directory(self, dir_type: str) -> str:
+        directory = QtWidgets.QFileDialog.getExistingDirectory(self, f"Select the {dir_type} directory")
+        return directory
+
+    def transfer_files(self):
+        self.fm.transfer_files(
+            target_name=self.ent_target.text(),
+            shoot_date=self.ent_date.text(),
+            cut_paste=self.chk_delete.isChecked(),
+            signaler=self.update_signal,
+        )
