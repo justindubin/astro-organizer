@@ -1,9 +1,9 @@
 import os
 import time
-from datetime import timedelta
 import yaml
 import shutil
 from pathlib import Path
+from datetime import timedelta
 
 
 class FileManager:
@@ -88,7 +88,7 @@ class FileManager:
         shutil.copytree(os.path.join(self.source_path), dst=extended_destination)
         t1 = time.perf_counter()
         if signaler is not None:
-            signaler.emit(f'Completed transfer in: {timedelta(seconds=t1-t0)}')
+            signaler.emit(f'Completed transfer in {timedelta(seconds=t1-t0)}')
 
         # Delete EOSMISC folder
         shutil.rmtree(os.path.join(extended_destination, 'EOSMISC'), ignore_errors=True)
@@ -103,7 +103,7 @@ class FileManager:
                 signaler.emit(f'    * {pre} --> {post}')
         t1 = time.perf_counter()
         if signaler is not None:
-            signaler.emit(f'Completed renaming in: {timedelta(seconds=t1-t0)}')
+            signaler.emit(f'Completed renaming in {timedelta(seconds=t1-t0)}')
 
         # Delete files from source directory
         if cut_paste:
@@ -122,7 +122,7 @@ class FileManager:
                         pass # Workaround for MacOS
             t1 = time.perf_counter()
             if signaler is not None:
-                signaler.emit(f'Cleaned source directory in: {timedelta(seconds=t1 - t0)}')
+                signaler.emit(f'Cleaned source directory in {timedelta(seconds=t1 - t0)}')
 
         _t1 = time.perf_counter()
         if signaler is not None:
