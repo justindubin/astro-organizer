@@ -1,17 +1,17 @@
-from PySide2 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore, QtGui
 from src.file_manager import FileManager
+from gui.thread_worker import Worker
 
 
 class MainWindow(QtWidgets.QMainWindow):
-    update_signal = QtCore.Signal(str)
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Astro File Organizer")
         self.setFixedSize(950, 330)
 
-        # Custom Signals
-        self.update_signal.connect(self.print_to_console)
+        # Create a QThreadPool for threading operations
+        self.threadpool = QtCore.QThreadPool()
 
         # Create a file manager
         self.fm = FileManager()
@@ -32,10 +32,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # Add Widgets - Inputs - Directory Form
         directory_form = QtWidgets.QFormLayout()
         self.ent_source = QtWidgets.QLineEdit(self.fm.source_path)
-        self.ent_source.setFixedWidth(400)
+        self.ent_source.setFixedWidth(420)
         self.ent_source.setReadOnly(True)
         self.ent_destination = QtWidgets.QLineEdit(self.fm.destination_path)
-        self.ent_destination.setFixedWidth(400)
+        self.ent_destination.setFixedWidth(420)
         self.ent_destination.setReadOnly(True)
         directory_form.addRow(QtWidgets.QLabel("Source:"), self.ent_source)
         directory_form.addRow(QtWidgets.QLabel("Destination:"), self.ent_destination)
@@ -77,10 +77,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Add Widgets - Outputs
         self.output_console = QtWidgets.QTextEdit()
+        self.output_console.setTextColor(QtGui.QColor('#68ff68'))
         self.output_console.setReadOnly(True)
         scroll_area = QtWidgets.QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setFixedWidth(350)
+        scroll_area.setFixedWidth(370)
         scroll_area.setFixedHeight(300)
         scroll_area.setWidget(self.output_console)
         self.outputs_layout.addWidget(scroll_area)
@@ -105,9 +106,10 @@ class MainWindow(QtWidgets.QMainWindow):
         return directory
 
     def transfer_files(self):
-        self.fm.transfer_files(
-            target_name=self.ent_target.text(),
-            shoot_date=self.ent_date.text(),
-            cut_paste=self.chk_delete.isChecked(),
-            signaler=self.update_signal,
-        )
+        target_name = self.ent_target.text()
+        shoot_date = self.ent_date.text()
+        cut_paste = self.chk_delete.isChecked()
+
+        worker = Worker(self.fm.transfer_files, target_name, shoot_date, cut_paste)
+        worker.signals.progress.connect(self.print_to_console)
+        self.threadpool.start(worker)

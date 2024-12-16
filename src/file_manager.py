@@ -75,13 +75,15 @@ class FileManager:
         _t0 = time.perf_counter()
 
         if signaler is not None:
-            signaler.emit('-' * 50)
-            signaler.emit(f'Initiating file transfer for {target_name} ({shoot_date}) session')
+            signaler.emit('*' * 49)
+            signaler.emit(f'\nInitiating file transfer session:')
+            signaler.emit(f'    * Target:  {target_name}')
+            signaler.emit(f'    * Date:  {shoot_date[2:4]}/{shoot_date[4:]}/{shoot_date[:2]}')
 
         # Copy the full directory tree from source to destination
         extended_destination = os.path.join(self.destination_path, target_name, f'{target_name}_{shoot_date}')
         if signaler is not None:
-            signaler.emit(f'\nCopying directory tree ...')
+            signaler.emit(f'\nCopying directory tree to destination ...')
         t0 = time.perf_counter()
         shutil.copytree(os.path.join(self.source_path), dst=extended_destination)
         t1 = time.perf_counter()
@@ -101,7 +103,7 @@ class FileManager:
                 signaler.emit(f'    * {pre} --> {post}')
         t1 = time.perf_counter()
         if signaler is not None:
-            signaler.emit(f'Completed transfer in: {timedelta(seconds=t1-t0)}')
+            signaler.emit(f'Completed renaming in: {timedelta(seconds=t1-t0)}')
 
         # Delete files from source directory
         if cut_paste:
@@ -117,15 +119,15 @@ class FileManager:
                     try:
                         os.remove(img_path)
                     except FileNotFoundError:
-                        # Workaround for MacOS
-                        pass
+                        pass # Workaround for MacOS
             t1 = time.perf_counter()
             if signaler is not None:
                 signaler.emit(f'Cleaned source directory in: {timedelta(seconds=t1 - t0)}')
 
         _t1 = time.perf_counter()
         if signaler is not None:
-            signaler.emit(f'\nProcess completed in {timedelta(seconds=t1-t0)}')
+            signaler.emit('')
+            signaler.emit(f' Process completed in {timedelta(seconds=_t1-_t0)} '.center(50, '*'))
 
 
 if __name__ == "__main__":
