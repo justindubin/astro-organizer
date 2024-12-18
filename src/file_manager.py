@@ -157,8 +157,3 @@ class FileManager:
         if signaler:
             signaler.progress.emit('')
             signaler.progress.emit(f' Process completed in {timedelta(seconds=_t1-_t0)} '.center(50, '*'))
-
-
-if __name__ == "__main__":
-    fm = FileManager()
-    fm.transfer_files(target_name='M42', shoot_date='241218', cut_paste=True)
