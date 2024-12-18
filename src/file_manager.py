@@ -2,8 +2,19 @@ import os
 import time
 import yaml
 import shutil
+import functools
 from pathlib import Path
 from datetime import timedelta
+
+
+class MissingInputError(Exception):
+    def __init__(self, message, error_code):
+        self.message = message
+        super().__init__(self.message)
+        self.error_code = error_code
+
+    def __str__(self):
+        return f"[Errno {self.error_code}] {self.message}"
 
 
 class FileManager:
@@ -71,44 +82,62 @@ class FileManager:
         with open(self.CONFIG_PATH, 'w') as f:
             yaml.dump(self.config_data, f, default_flow_style=False)
 
+    @staticmethod
+    def validate_inputs(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            for arg_idx, field_key in enumerate(["target_name", "shoot_date"]):
+                if field_key not in kwargs.keys():
+                    field_value = args[arg_idx]
+                else:
+                    field_value = kwargs[field_key]
+
+                if not field_value:
+                    field_name = field_key.replace('_', ' ').title()
+                    raise MissingInputError(f'Missing required input: {field_name}', 400)
+
+            func(self, *args, **kwargs)
+        return wrapper
+
+    @validate_inputs
     def transfer_files(self, target_name: str, shoot_date: str, cut_paste=True, signaler=None) -> None:
         _t0 = time.perf_counter()
 
         if signaler:
-            signaler.emit('*' * 49)
-            signaler.emit(f'\nInitiating file transfer session:')
-            signaler.emit(f'    * Target:  {target_name}')
-            signaler.emit(f'    * Date:  {shoot_date[2:4]}/{shoot_date[4:]}/{shoot_date[:2]}')
+            signaler.progress.emit('*' * 49)
+            signaler.progress.emit(f'\nInitiating file transfer session:')
+            signaler.progress.emit(f'    * Target:  {target_name}')
+            signaler.progress.emit(f'    * Date:  {shoot_date[2:4]}/{shoot_date[4:]}/{shoot_date[:2]}')
 
         # Copy the full directory tree from source to destination
         extended_destination = os.path.join(self.destination_path, target_name, f'{target_name}_{shoot_date}')
         if signaler:
-            signaler.emit(f'\nCopying directory tree to destination ...')
+            signaler.progress.emit(f'\nCopying directory tree to destination ...')
         t0 = time.perf_counter()
         shutil.copytree(os.path.join(self.source_path), dst=extended_destination)
         t1 = time.perf_counter()
         if signaler:
-            signaler.emit(f'Completed transfer in {timedelta(seconds=t1-t0)}')
+            signaler.progress.emit(f'Completed transfer in {timedelta(seconds=t1-t0)}')
 
         # Delete EOSMISC folder
         shutil.rmtree(os.path.join(extended_destination, 'EOSMISC'), ignore_errors=True)
 
         # Rename destination folders
         if signaler:
-            signaler.emit(f'\nRenaming folders for Siril compliance ...')
+            signaler.progress.emit(f'\nRenaming folders for Siril compliance ...')
         t0 = time.perf_counter()
         for pre, post in self.FOLDER_MAP.items():
             os.rename(src=os.path.join(extended_destination, pre), dst=os.path.join(extended_destination, post))
             if signaler:
-                signaler.emit(f'    * {pre} --> {post}')
+                signaler.progress.emit(f'    * {pre} --> {post}')
         t1 = time.perf_counter()
         if signaler:
-            signaler.emit(f'Completed renaming in {timedelta(seconds=t1-t0)}')
+            signaler.progress.emit(f'Completed renaming in {timedelta(seconds=t1-t0)}')
 
         # Delete files from source directory
         if cut_paste:
             if signaler:
-                signaler.emit(f'\nRemoving files from source directory ...')
+                signaler.progress.emit(f'\nRemoving files from source directory ...')
             t0 = time.perf_counter()
             for folder_name in os.listdir(self.source_path):
                 if folder_name == 'EOSMISC':
@@ -119,15 +148,15 @@ class FileManager:
                     try:
                         os.remove(img_path)
                     except FileNotFoundError:
-                        pass # Workaround for MacOS
+                        pass  # Workaround for MacOS
             t1 = time.perf_counter()
             if signaler:
-                signaler.emit(f'Cleaned source directory in {timedelta(seconds=t1 - t0)}')
+                signaler.progress.emit(f'Cleaned source directory in {timedelta(seconds=t1 - t0)}')
 
         _t1 = time.perf_counter()
         if signaler:
-            signaler.emit('')
-            signaler.emit(f' Process completed in {timedelta(seconds=_t1-_t0)} '.center(50, '*'))
+            signaler.progress.emit('')
+            signaler.progress.emit(f' Process completed in {timedelta(seconds=_t1-_t0)} '.center(50, '*'))
 
 
 if __name__ == "__main__":

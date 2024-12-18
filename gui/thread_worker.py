@@ -1,11 +1,10 @@
 import sys
-import traceback
 from PySide2.QtCore import QObject, QRunnable, Signal, Slot
 
 
 class WorkerSignals(QObject):
     finished = Signal()
-    error = Signal(tuple)
+    error = Signal(str)
     result = Signal(object)
     progress = Signal(str)
 
@@ -18,17 +17,14 @@ class Worker(QRunnable):
         self.args = args
         self.kwargs = kwargs
         self.signals = WorkerSignals()
-
-        self.kwargs['signaler'] = self.signals.progress
+        self.kwargs['signaler'] = self.signals
 
     @Slot()
     def run(self):
         try:
             result = self.fn(*self.args, **self.kwargs)
         except:
-            traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit((exctype, value, traceback.format_exc()))
+            self.signals.error.emit(str(sys.exc_info()[1]))
         else:
             self.signals.result.emit(result)
         finally:

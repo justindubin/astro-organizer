@@ -1,4 +1,6 @@
 import functools
+import os.path
+
 from PySide2 import QtWidgets, QtCore, QtGui
 from src.file_manager import FileManager
 from gui.thread_worker import Worker
@@ -91,12 +93,36 @@ class MainWindow(QtWidgets.QMainWindow):
     def validate_inputs(func):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
-            all_valid = True
-            # TODO: Check validity
-            #   1. Both directories valid
-            #   2. Valid target name and shoot date
-            if all_valid:
+            error_message = ''
+            self.fm.recall_last()
+            dir_tuples = [('source', self.fm.source_path), ('destination', self.fm.destination_path)]
+            for dir_name, dir_path in dir_tuples:
+
+                # 1. Check that both directories were specified
+                if dir_path == '':
+                    error_message = f'No {dir_name} directory specified!'
+                    break
+
+                # 2. Verify that the specified source directory exists
+                elif dir_name == 'source':
+                    if not os.path.isdir(dir_path):
+                        error_message = f'The specified source directory does not exist!'
+                        break
+
+                    # 3. Verify the source directory contains required folders
+                    for folder_name in self.fm.FOLDER_MAP.keys():
+                        check_path = os.path.join(dir_path, folder_name)
+                        if not os.path.isdir(check_path):
+                            error_message = f'The source directory is missing a required folder: "{folder_name}"'
+                            break
+
+            if not error_message:
                 func(self, *args, **kwargs)
+            else:
+                dlg = QtWidgets.QMessageBox(self)
+                dlg.setText(error_message)
+                dlg.setIcon(QtWidgets.QMessageBox.Critical)
+                dlg.exec_()
             return
         return wrapper
 
@@ -107,17 +133,29 @@ class MainWindow(QtWidgets.QMainWindow):
         directory = self.select_directory('source')
         self.fm.update_last(source_path=directory)
         self.ent_source.setText(directory)
-        self.print_to_console(f"Successfully remapped source directory")
+        self.print_to_console(f"Source directory updated:\n  -> {directory}\n")
 
     def update_destination(self) -> None:
         directory = self.select_directory('destination')
         self.fm.update_last(destination_path=directory)
         self.ent_destination.setText(directory)
-        self.print_to_console(f"Successfully remapped destination directory")
+        self.print_to_console(f"Destination directory updated:\n  -> {directory}\n")
 
     def select_directory(self, dir_type: str) -> str:
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, f"Select the {dir_type} directory")
         return directory
+
+    def throw_script_error(self, error_msg: str) -> None:
+        # Update the console
+        self.output_console.setTextColor(QtGui.QColor('#fc3d21'))
+        self.print_to_console("\nPROCESS FAILED\n")
+        self.output_console.setTextColor(QtGui.QColor('#68ff68'))
+
+        # Throw error window
+        dlg = QtWidgets.QMessageBox(self)
+        dlg.setText(error_msg)
+        dlg.setIcon(QtWidgets.QMessageBox.Critical)
+        dlg.exec_()
 
     @validate_inputs
     def transfer_files(self):
@@ -127,4 +165,5 @@ class MainWindow(QtWidgets.QMainWindow):
 
         worker = Worker(self.fm.transfer_files, target_name, shoot_date, cut_paste)
         worker.signals.progress.connect(self.print_to_console)
+        worker.signals.error.connect(self.throw_script_error)
         self.threadpool.start(worker)
