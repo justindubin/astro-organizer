@@ -74,7 +74,7 @@ class FileManager:
     def transfer_files(self, target_name: str, shoot_date: str, cut_paste=True, signaler=None) -> None:
         _t0 = time.perf_counter()
 
-        if signaler is not None:
+        if signaler:
             signaler.emit('*' * 49)
             signaler.emit(f'\nInitiating file transfer session:')
             signaler.emit(f'    * Target:  {target_name}')
@@ -82,32 +82,32 @@ class FileManager:
 
         # Copy the full directory tree from source to destination
         extended_destination = os.path.join(self.destination_path, target_name, f'{target_name}_{shoot_date}')
-        if signaler is not None:
+        if signaler:
             signaler.emit(f'\nCopying directory tree to destination ...')
         t0 = time.perf_counter()
         shutil.copytree(os.path.join(self.source_path), dst=extended_destination)
         t1 = time.perf_counter()
-        if signaler is not None:
+        if signaler:
             signaler.emit(f'Completed transfer in {timedelta(seconds=t1-t0)}')
 
         # Delete EOSMISC folder
         shutil.rmtree(os.path.join(extended_destination, 'EOSMISC'), ignore_errors=True)
 
         # Rename destination folders
-        if signaler is not None:
+        if signaler:
             signaler.emit(f'\nRenaming folders for Siril compliance ...')
         t0 = time.perf_counter()
         for pre, post in self.FOLDER_MAP.items():
             os.rename(src=os.path.join(extended_destination, pre), dst=os.path.join(extended_destination, post))
-            if signaler is not None:
+            if signaler:
                 signaler.emit(f'    * {pre} --> {post}')
         t1 = time.perf_counter()
-        if signaler is not None:
+        if signaler:
             signaler.emit(f'Completed renaming in {timedelta(seconds=t1-t0)}')
 
         # Delete files from source directory
         if cut_paste:
-            if signaler is not None:
+            if signaler:
                 signaler.emit(f'\nRemoving files from source directory ...')
             t0 = time.perf_counter()
             for folder_name in os.listdir(self.source_path):
@@ -121,11 +121,11 @@ class FileManager:
                     except FileNotFoundError:
                         pass # Workaround for MacOS
             t1 = time.perf_counter()
-            if signaler is not None:
+            if signaler:
                 signaler.emit(f'Cleaned source directory in {timedelta(seconds=t1 - t0)}')
 
         _t1 = time.perf_counter()
-        if signaler is not None:
+        if signaler:
             signaler.emit('')
             signaler.emit(f' Process completed in {timedelta(seconds=_t1-_t0)} '.center(50, '*'))
 

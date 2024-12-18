@@ -1,3 +1,4 @@
+import functools
 from PySide2 import QtWidgets, QtCore, QtGui
 from src.file_manager import FileManager
 from gui.thread_worker import Worker
@@ -86,6 +87,19 @@ class MainWindow(QtWidgets.QMainWindow):
         scroll_area.setWidget(self.output_console)
         self.outputs_layout.addWidget(scroll_area)
 
+    @staticmethod
+    def validate_inputs(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            all_valid = True
+            # TODO: Check validity
+            #   1. Both directories valid
+            #   2. Valid target name and shoot date
+            if all_valid:
+                func(self, *args, **kwargs)
+            return
+        return wrapper
+
     def print_to_console(self, text: str) -> None:
         self.output_console.append(text)
 
@@ -105,6 +119,7 @@ class MainWindow(QtWidgets.QMainWindow):
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, f"Select the {dir_type} directory")
         return directory
 
+    @validate_inputs
     def transfer_files(self):
         target_name = self.ent_target.text()
         shoot_date = self.ent_date.text()
