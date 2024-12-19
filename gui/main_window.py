@@ -1,9 +1,10 @@
 import functools
-import os.path
+import os
 
 from PySide2 import QtWidgets, QtCore, QtGui
-from src.file_manager import FileManager
+
 from gui.thread_worker import Worker
+from src.file_manager import FileManager
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -94,7 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
             error_message = ''
-            self.fm.recall_last()
+            self.fm.recall_paths()
             dir_tuples = [('source', self.fm.source_path), ('destination', self.fm.destination_path)]
             for dir_name, dir_path in dir_tuples:
 
@@ -131,13 +132,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def update_source(self) -> None:
         directory = self.select_directory('source')
-        self.fm.update_last(source_path=directory)
+        self.fm.update_paths(source_path=directory)
         self.ent_source.setText(directory)
         self.print_to_console(f"Source directory updated:\n  -> {directory}\n")
 
     def update_destination(self) -> None:
         directory = self.select_directory('destination')
-        self.fm.update_last(destination_path=directory)
+        self.fm.update_paths(destination_path=directory)
         self.ent_destination.setText(directory)
         self.print_to_console(f"Destination directory updated:\n  -> {directory}\n")
 

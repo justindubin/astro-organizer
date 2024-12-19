@@ -1,10 +1,10 @@
-import os
-import time
-import yaml
-import shutil
-import functools
-from pathlib import Path
 from datetime import timedelta
+import functools
+import os
+import shutil
+import time
+
+from dotenv import load_dotenv, find_dotenv, set_key
 
 
 class MissingInputError(Exception):
@@ -19,12 +19,6 @@ class MissingInputError(Exception):
 
 class FileManager:
 
-    # Create a cfg file if none exists
-    CONFIG_PATH = os.path.join(str(Path(__file__).parent.parent), "cfg/config.yaml")
-    if not os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, 'w') as f:
-            yaml.dump({'last_paths': {'source': None, 'destination': None}}, f, default_flow_style=False)
-
     FOLDER_MAP = {
         '100_BIAS': 'biases',
         '101_DARK': 'darks',
@@ -33,18 +27,11 @@ class FileManager:
     }
 
     def __init__(self):
-        self._config_data = None
         self._source_path = None
         self._destination_path = None
-        self.recall_last()
-
-    @property
-    def config_data(self) -> dict:
-        return self._config_data
-
-    @config_data.setter
-    def config_data(self, config_data: dict) -> None:
-        self._config_data = config_data
+        self.dotenv_path = find_dotenv()
+        load_dotenv(self.dotenv_path)
+        self.recall_paths()
 
     @property
     def source_path(self) -> str:
@@ -62,25 +49,17 @@ class FileManager:
     def destination_path(self, destination_path: str) -> None:
         self._destination_path = destination_path
 
-    def recall_last(self) -> None:
-        with open(self.CONFIG_PATH, 'r') as f:
-            self.config_data = yaml.load(f, Loader=yaml.FullLoader)
-        try:
-            self.source_path = self.config_data['last_paths']['source']
-        except TypeError:
-            self.source_path = None
-        try:
-            self.destination_path = self.config_data['last_paths']['destination']
-        except TypeError:
-            self.destination_path = None
+    def recall_paths(self) -> None:
+        self.source_path = os.getenv("SOURCE_DIR")
+        self.destination_path = os.getenv("DESTINATION_DIR")
 
-    def update_last(self, source_path=None, destination_path=None) -> None:
+    def update_paths(self, source_path=None, destination_path=None) -> None:
         if source_path is not None:
-            self.config_data['last_paths']['source'] = source_path
+            os.environ["SOURCE_DIR"] = source_path
+            set_key(self.dotenv_path, "SOURCE_DIR", os.environ["SOURCE_DIR"])
         if destination_path is not None:
-            self.config_data['last_paths']['destination'] = destination_path
-        with open(self.CONFIG_PATH, 'w') as f:
-            yaml.dump(self.config_data, f, default_flow_style=False)
+            os.environ["DESTINATION_DIR"] = destination_path
+            set_key(self.dotenv_path, "DESTINATION_DIR", os.environ["DESTINATION_DIR"])
 
     @staticmethod
     def validate_inputs(func):
