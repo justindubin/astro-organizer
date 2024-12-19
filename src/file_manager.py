@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 import functools
 import os
 from pathlib import Path
@@ -7,15 +7,7 @@ import time
 
 from dotenv import load_dotenv, find_dotenv, set_key
 
-
-class MissingInputError(Exception):
-    def __init__(self, message, error_code):
-        self.message = message
-        super().__init__(self.message)
-        self.error_code = error_code
-
-    def __str__(self):
-        return f"[Errno {self.error_code}] {self.message}"
+from src.custom_error import CustomError
 
 
 class FileManager:
@@ -78,7 +70,7 @@ class FileManager:
 
                 if not field_value:
                     field_name = field_key.replace('_', ' ').title()
-                    raise MissingInputError(f'Missing required input: {field_name}', 400)
+                    raise CustomError(f'Missing required input: {field_name}', 400)
 
             func(self, *args, **kwargs)
         return wrapper
@@ -87,14 +79,20 @@ class FileManager:
     def transfer_files(self, target_name: str, shoot_date: str, cut_paste=True, signaler=None) -> None:
         _t0 = time.perf_counter()
 
+        # Convert to datetime
+        extended_destination = os.path.join(self.destination_path, target_name, f'{target_name}_{shoot_date}')
+        try:
+            shoot_date = datetime.strptime(shoot_date, "%y%m%d")
+        except ValueError:
+            raise CustomError(f'Invalid input: Unable to convert string "{shoot_date}"to datetime object\n\nPlease ensure input string conforms to the YYMMDD convention', 401)
+
         if signaler:
             signaler.progress.emit('*' * 49)
             signaler.progress.emit(f'\nInitiating file transfer session:')
             signaler.progress.emit(f'    * Target:  {target_name}')
-            signaler.progress.emit(f'    * Date:  {shoot_date[2:4]}/{shoot_date[4:]}/{shoot_date[:2]}')
+            signaler.progress.emit(f'    * Date:  {shoot_date:%B %d, %Y}')
 
         # Copy the full directory tree from source to destination
-        extended_destination = os.path.join(self.destination_path, target_name, f'{target_name}_{shoot_date}')
         if signaler:
             signaler.progress.emit(f'\nCopying directory tree to destination ...')
         t0 = time.perf_counter()
