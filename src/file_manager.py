@@ -1,6 +1,7 @@
 from datetime import timedelta
 import functools
 import os
+from pathlib import Path
 import shutil
 import time
 
@@ -19,6 +20,7 @@ class MissingInputError(Exception):
 
 class FileManager:
 
+    ENV_FILE_PATH = os.path.join(Path(__file__).parent.parent, '.env')
     FOLDER_MAP = {
         '100_BIAS': 'biases',
         '101_DARK': 'darks',
@@ -29,6 +31,9 @@ class FileManager:
     def __init__(self):
         self._source_path = None
         self._destination_path = None
+        if not os.path.exists(self.ENV_FILE_PATH):
+            with open(self.ENV_FILE_PATH, 'w') as f:
+                f.write("SOURCE_DIR=''\nDESTINATION_DIR=''")
         self.dotenv_path = find_dotenv()
         load_dotenv(self.dotenv_path)
         self.recall_paths()
